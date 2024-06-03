@@ -1,28 +1,29 @@
 // PID constants
 #include <Servo.h>
 
-float kp = 77, ki = 0, kd = 160;
+float kp = 47.2, ki = 0.01, kd = 160;
 float error = 0, P = 0, I = 0, D = 0, PID_value = 0;
 float previous_error = 0;
 char state;
 // Sensor values
 int sensor[5] = {0, 0, 0, 0, 0};
 
-int gia_tri_ban_dau = 85; // Base speed
+int gia_tri_ban_dau = 90; // Base speed
 int PID_phai, PID_trai;
 char var;
 
-int stop_distance = 6;// Khoảng cách phát hiện vật cản
+int stop_distance = 8;// Khoảng cách phát hiện vật cản
 const int trigPin = 12; // kết nối chân trig với chân 11 arduino
 const int echoPin = 13; // kết nối chân echo với chân 12 arduino
 long duration; 
-int distance; 
+int value; 
 
 
 int servoPin = 9;
 Servo servo;
 int angle = 0;
 int speed;
+int k,sum,old_sum,distance;
 // Motor control pins
 #define in1 4
 #define in2 5
@@ -32,14 +33,16 @@ int speed;
 #define enb 11
 
 // Function prototypes
-void read_sensor_values(void);
-void calculate_pid(void);
-void motor_control(void);
+uint16_t read_sensor_values();
+void calculate_pid(int);
+void motor_control();
 void dung(int);
 void chay_thang(int);
 void lui(int);
 void phai(int,int);
 void trai(int,int);
+void vatcan();
+void tranhvatcan();
 
 void setup() {
   // Initialize motor control pins
@@ -74,6 +77,29 @@ void setup() {
 }
 
 void loop() {
+  
+  vatcan();
+  Serial.println(distance);
+  if(distance < stop_distance)
+  {
+    tranhvatcan();
+  }
+  else
+  {
+  value = read_sensor_values();
+  /////////////////
+  calculate_pid(value);
+  //////////////////
+  motor_control();
+  }
+  /*
+  Serial.println(PID_phai);
+  Serial.println(PID_trai);
+  */
+  delay(10);
+}
+void vatcan()
+{
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin, HIGH);
@@ -81,55 +107,46 @@ void loop() {
   digitalWrite(trigPin, LOW);
   duration = pulseIn(echoPin, HIGH);
   distance = duration * 0.034 / 2;
-  delay(15);
-  read_sensor_values();
-  if (sensor[0] == 1 && sensor[1] == 1 && sensor[2] == 1 && sensor[3] == 1 && sensor[4] == 1) {
-    lui(40);  
-  }
-  else if (sensor[0] == 0 && sensor[1] == 0 && sensor[2] == 0 && sensor[3] == 0 && sensor[4] == 0) {
-    lui(50);  
-    dung(100);
-    chay_thang(60);
-  }
-   else {
-    calculate_pid();
-    motor_control();
-  }
 }
-
-void read_sensor_values() {
+uint16_t read_sensor_values() {
   // Read sensor values
-  sensor[0] = digitalRead(A0);
+  sum = 0;
+  k = 0;
+
+  sensor[2] = digitalRead(A0);
   sensor[1] = digitalRead(A1);
-  sensor[2] = digitalRead(A2);
-  sensor[3] = digitalRead(A3);
-  sensor[4] = digitalRead(A4);
+  sensor[0] = digitalRead(A2);
+  //Serial.print(sensor[0]);Serial.print(" ");Serial.print(sensor[1]);Serial.print(" ");Serial.print(sensor[2]);Serial.println(" ");
   // Calculate error based on sensor values
-  if((sensor[0]==1)&&(sensor[1]==1)&&(sensor[2]==1)&&(sensor[4]==1)&&(sensor[4]==0))
-  error=4;
-  else if((sensor[0]==1)&&(sensor[1]==1)&&(sensor[2]==1)&&(sensor[3]==0)&&(sensor[4]==0))
-  error=3;
-  else if((sensor[0]==1)&&(sensor[1]==1)&&(sensor[2]==1)&&(sensor[3]==0)&&(sensor[4]==1))
-  error=2;
-  else if((sensor[0]==1)&&(sensor[1]==1)&&(sensor[2]==0)&&(sensor[3]==0)&&(sensor[4]==1))
-  error=1;
-  else if((sensor[0]==1)&&(sensor[1]==1)&&(sensor[2]==0)&&(sensor[3]==1)&&(sensor[4]==1))
-  error=0;
-  else if((sensor[0]==1)&&(sensor[1]==0)&&(sensor[2]==0)&&(sensor[3]==1)&&(sensor[4]==1))
-  error=-1;
-  else if((sensor[0]==1)&&(sensor[1]==0)&&(sensor[2]==1)&&(sensor[3]==1)&&(sensor[4]==1))
-  error=-2;
-  else if((sensor[0]==0)&&(sensor[1]==0)&&(sensor[2]==1)&&(sensor[3]==1)&&(sensor[4]==1))
-  error=-3;
-  else if((sensor[0]==0)&&(sensor[1]==1)&&(sensor[2]==1)&&(sensor[3]==1)&&(sensor[4]==1))
-  error=-4;
-  else if((sensor[0]==1)&&(sensor[1]==1)&&(sensor[2]==1)&&(sensor[3]==1)&&(sensor[4]==1))
-    if(error==-4) error=-5;
-    else error=5;
+  for(int i = 1; i < 4; i++)
+  {
+    if(sensor[i-1] == 1)
+    {
+      k = k+1;
+      sum = sum + i*100;
+    }
+  }
+  if( k>0 && k<4)
+  {
+    old_sum = sum/k;
+    return old_sum;
+  }
+  else
+  {
+    if(old_sum == 200)
+    {
+      return 200;
+    }
+    else 
+    {
+      return old_sum;
+    }
+  }
 }
 
-void calculate_pid() {
+void calculate_pid(int value) {
   // Calculate PID values
+  error = (200 - value)/12.5;
   P = error;
   I = I + error;
   D = error - previous_error;
@@ -140,7 +157,6 @@ void calculate_pid() {
 void motor_control() {
 
     // Continue normal PID control for small adjustments
-    if(distance > stop_distance){
     digitalWrite(in1, LOW);
     digitalWrite(in2, HIGH);
     digitalWrite(in3, LOW);
@@ -148,14 +164,14 @@ void motor_control() {
 
     //PID_phai = gia_tri_ban_dau - PID_value;
     //PID_trai = gia_tri_ban_dau + PID_value;
-    PID_phai = constrain(gia_tri_ban_dau - PID_value, 0, 121);//121, 115
-    PID_trai = constrain(gia_tri_ban_dau + PID_value, 0, 121);
+    PID_phai = constrain(gia_tri_ban_dau - PID_value,0,200);//121, 115
+    PID_trai = constrain(gia_tri_ban_dau + PID_value,0,200);
     analogWrite(enb, PID_phai);
     analogWrite(ena, PID_trai);
-  }
-  else
-  {
-    speed = 150;
+}
+void tranhvatcan()
+{
+  speed = 150;
     analogWrite(enb, 0);
     analogWrite(ena, 0);
     digitalWrite(8, HIGH);
@@ -232,7 +248,6 @@ void motor_control() {
       }
       return;
      }
-    }
   }
 }
 void trai(int dl, int speed)
@@ -284,3 +299,4 @@ void lui(int dl) {
   analogWrite(enb, 110);
   delay(dl);
 }
+
