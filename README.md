@@ -4,7 +4,7 @@ Tune 3 paramtter included: Kp, Ki and Kd to car can follow the line
 ![car](https://github.com/Honf103/Car_with_PID_and_supersonic/assets/171224647/a6d480f1-5ae5-42fc-a5b2-5afbc810c159)
 
 Hardware :
-![A0](https://github.com/Honf103/Car_with_PID_and_supersonic/assets/171224647/daf7c6dc-a21d-479c-b16e-27a0635774a3)
+![A0](https://github.com/Honf103/Car_with_PID_and_supersonic/assets/171224647/0d301fea-fc5e-4b8d-8f37-0b9083c96d16)
 
 You can download a map to test function of this car.
 The map with size 80cmx160cm
