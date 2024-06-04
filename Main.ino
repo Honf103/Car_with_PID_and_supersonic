@@ -1,7 +1,7 @@
 // PID constants
 #include <Servo.h>
 
-float kp = 47.2, ki = 0.01, kd = 160;
+float kp = 50.2, ki = 0.01, kd = 160;
 float error = 0, P = 0, I = 0, D = 0, PID_value = 0;
 float previous_error = 0;
 char state;
@@ -12,7 +12,7 @@ int gia_tri_ban_dau = 90; // Base speed
 int PID_phai, PID_trai;
 char var;
 
-int stop_distance = 8;// Khoảng cách phát hiện vật cản
+int stop_distance = 20;// Khoảng cách phát hiện vật cản
 const int trigPin = 12; // kết nối chân trig với chân 11 arduino
 const int echoPin = 13; // kết nối chân echo với chân 12 arduino
 long duration; 
@@ -43,6 +43,8 @@ void phai(int,int);
 void trai(int,int);
 void vatcan();
 void tranhvatcan();
+void xoaytronphai(int);
+void xoaytrontrai(int);
 
 void setup() {
   // Initialize motor control pins
@@ -79,7 +81,6 @@ void setup() {
 void loop() {
   
   vatcan();
-  Serial.println(distance);
   if(distance < stop_distance)
   {
     tranhvatcan();
@@ -146,7 +147,7 @@ uint16_t read_sensor_values() {
 
 void calculate_pid(int value) {
   // Calculate PID values
-  error = (200 - value)/12.5;
+  error = (200 - value)/23;
   P = error;
   I = I + error;
   D = error - previous_error;
@@ -171,13 +172,16 @@ void motor_control() {
 }
 void tranhvatcan()
 {
-  speed = 150;
+    speed = 150;
     analogWrite(enb, 0);
     analogWrite(ena, 0);
-    digitalWrite(8, HIGH);
-    delay(300);
-    digitalWrite(8, LOW);
-    delay(50);
+  for(int i =0; i <5; i++)
+    {
+      digitalWrite(8, HIGH);
+      delay(100);
+      digitalWrite(8, LOW);
+      delay(50);
+    }
     servo.write(0);
     delay(1600);
     Serial.println("Davo");
@@ -192,26 +196,22 @@ void tranhvatcan()
 
     if(distance > stop_distance)
     {
-      lui(200);
-      dung(100);
-      phai(400,speed);
-      chay_thang(385);
-      dung(100);
-      trai(400,speed);
-      chay_thang(100);
-      dung(100);
-
+      lui(300);
+      xoaytronphai(500);
+      sensor[2] = digitalRead(A0);
+      sensor[1] = digitalRead(A1);
+      sensor[0] = digitalRead(A2);
+      while(sensor[0] == 0 && sensor[1] == 0 && sensor[2] == 0)
+      {
+        xoaytronphai(10);
+        sensor[2] = digitalRead(A0);
+        sensor[1] = digitalRead(A1);
+        sensor[0] = digitalRead(A2);
+      }
+      analogWrite(enb, 0);
+      analogWrite(ena, 0);
       servo.write(90);
       delay(1600);
-      read_sensor_values();
-
-      while(sensor[0] == 1 && sensor[1] == 1 && sensor[2] == 1 && sensor[3] == 1 && sensor[4] == 1)
-      {
-        speed = 200;
-        trai(8,speed);
-        read_sensor_values();
-
-      }
       return;
     } 
     else
@@ -229,26 +229,26 @@ void tranhvatcan()
 
     if(distance > stop_distance)
     {
-      lui(175);
-      dung(100);
-      trai(400,speed);
-      chay_thang(385);
-      dung(100);
-      phai(350,speed);
-      chay_thang(100);
-      dung(100);
+      lui(300);
+      xoaytrontrai(500);
+      sensor[2] = digitalRead(A0);
+      sensor[1] = digitalRead(A1);
+      sensor[0] = digitalRead(A2);      
+      while(sensor[0] == 0 && sensor[1] == 0 && sensor[2] == 0)
+      {
+        xoaytrontrai(10);
+      sensor[2] = digitalRead(A0);
+      sensor[1] = digitalRead(A1);
+      sensor[0] = digitalRead(A2);     
+      }
+      analogWrite(enb, 0);
+     analogWrite(ena, 0);
       servo.write(90);
       delay(1600);
-      read_sensor_values();
-      while(sensor[0] == 1 && sensor[1] == 1 && sensor[2] == 1 && sensor[3] == 1 && sensor[4] == 1)
-      {
-        speed = 200;
-        phai(8,speed);
-        read_sensor_values();
-      }
       return;
      }
   }
+
 }
 void trai(int dl, int speed)
 {
@@ -299,4 +299,23 @@ void lui(int dl) {
   analogWrite(enb, 110);
   delay(dl);
 }
-
+void xoaytrontrai(int dl)
+{
+  digitalWrite(in1, HIGH);
+  digitalWrite(in2, LOW);
+  digitalWrite(in3, LOW);
+  digitalWrite(in4, HIGH);
+  analogWrite(ena, 130);
+  analogWrite(enb, 130);
+  delay(dl);
+}
+void xoaytronphai(int dl)
+{
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, HIGH);
+  digitalWrite(in3, HIGH);
+  digitalWrite(in4, LOW);
+  analogWrite(ena, 130);
+  analogWrite(enb, 130);
+  delay(dl);
+}
